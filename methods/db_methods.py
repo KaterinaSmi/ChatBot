@@ -19,6 +19,7 @@ def get_count(db_collection):
 def add_person(db_collection):
     count_d = get_count(db_collection)
     data = {
+        "_id": count_d + 1,
         "name": f"name{count_d + 1}",
         "surname": f"surname{count_d + 1}"
     }
@@ -27,9 +28,7 @@ def add_person(db_collection):
 
 
 def search(db_collection, text_filter):
-    #pattern for searching filter, like text + any digit, ignoring cases
-    regex = re.compile(f"^{text_filter}\\d+$", re.IGNORECASE)
     return list(db_collection.find({
-        "$or": [{"name": {"$regex": regex}} , {"surname": {"$regex": regex}}]
+        "$or": [{"name": {"$regex": text_filter}} , {"surname": {"$regex": text_filter}}]
     }))
 

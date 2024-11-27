@@ -37,14 +37,15 @@ def search_persons(message):
     text_message = message.text #get all the text of all the command message
     text_filter = text_message.split(" ")[1]
     persons = db_methods.search(db_collection=people_collection, text_filter=text_filter)
-
     markup = types.InlineKeyboardMarkup()
-    bot1 = types.InlineKeyboardButton('Name',callback_data='search_name')
-    bot2 = types.InlineKeyboardButton('Surname', callback_data='search_name')
-    markup.row(bot1,bot2)
-
-    print(persons)
+    for person in persons:
+        markup.add(types.InlineKeyboardButton(text=f'{person["name"]} {person["surname"]}', callback_data=f'selected_person_{person["_id"]}'))
     bot.send_message(chat_id=message.chat.id, text=f'The persons have been found: ', parse_mode='html', reply_markup=markup)
 
+@bot.callback_query_handler(func = lambda callback: True)
+def callback_message(callback):
+    if 'selected_person' in callback.data:
+        person_id = int(callback.data[16:])
+        bot.send_message(callback.message.chat.id, f'<i>The person you are looking for is {person_id}</i>', parse_mode='html')
 bot.infinity_polling()
 
