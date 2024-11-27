@@ -16,6 +16,9 @@ def get_count(db_collection):
     return db_collection.count_documents({})
 
 
+def get_person(db_collection):
+    pass
+
 def add_person(db_collection):
     count_d = get_count(db_collection)
     data = {
