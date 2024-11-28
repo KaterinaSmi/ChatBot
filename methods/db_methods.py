@@ -18,6 +18,12 @@ def get_count(db_collection):
 
 def get_person(db_collection):
     pass
+#1)-return doc or info with person's data'...
+# We need to know which fields person contains. Not everyone has the same fields.
+#we need to return not a message but buttons with possible opertions 'edit name' 'edit surname' 'edit city' 'edit bd'
+#default we have name and surname => 2 buttons with pos operations.
+#Buttons only with db data.
+#2)db_methods unique function of data renewing. input params - type/field, new param. UPDATE method
 
 def add_person(db_collection):
     count_d = get_count(db_collection)
