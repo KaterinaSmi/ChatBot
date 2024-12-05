@@ -42,11 +42,13 @@ def add_person(db_collection):
     return data
 
 
-def search(db_collection, text_filter):
+def search_persons(db_collection, text_filter):
     return list(db_collection.find({
         "$or": [{"name": {"$regex": text_filter}} , {"surname": {"$regex": text_filter}}]
     }))
-def update(db_collection, text_filter):
-    return list(db_collection.find({
-        "$or": [{"name": {"$regex": text_filter}} , {"surname": {"$regex": text_filter}}]
-    }))
+
+
+def update_person_field(db_collection, person_id, person_field, new_value):
+    return db_collection.update_one({"_id": person_id}, {'$set': {person_field: new_value}})
+
+#HW  reading states Group

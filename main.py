@@ -34,16 +34,8 @@ def find_all(message):
     markup = types.InlineKeyboardMarkup()
     all_people = db_methods.get_all(db_collection=people_collection)
     for person in all_people:
-        markup.add(types.InlineKeyboardButton(text=f'{person["name"]} {person["surname"]}',callback_data=f'find_all_{person["_id"]}'))
+        markup.add(types.InlineKeyboardButton(text=f'{person["name"]} {person["surname"]}',callback_data=f'selected_person_{person["_id"]}'))
     bot.send_message(chat_id=message.chat.id, text=f'These people are in database: ', parse_mode='html', reply_markup=markup)
-
-@bot.callback_query_handler(func = lambda callback: True)
-def callback_message_find_all(callback):
-    if 'find_all' in callback.data:
-        call_back_data = callback.data.split("_")
-        person_id = call_back_data[2]
-
-        bot.send_message(callback.message.chat.id, text=text, parse_mode='html', reply_markup=markup)
 
 @bot.message_handler(commands=['search'])
 def search_persons(message):
@@ -53,7 +45,7 @@ def search_persons(message):
     text_message = message.text #get all the text of all the command message
     text_filter = text_message.split(" ")[1]
     #Here is function implementation
-    persons = db_methods.search(db_collection=people_collection, text_filter=text_filter)
+    persons = db_methods.search_persons(db_collection=people_collection, text_filter=text_filter)
     markup = types.InlineKeyboardMarkup()
     for person in persons:
         #label!! dynamically adapts to any field we have in dictionary
