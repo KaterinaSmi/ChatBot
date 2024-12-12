@@ -20,15 +20,6 @@ def get_count(db_collection):
 def get_person_by_id(db_collection, person_id:int):
     person = db_collection.find_one({"_id": person_id})
     return person
-#HW: implement update_person DONT USE
-#handle "all_persons" command, which display buttons with everyone; both files
-
-# def update_person...
-    # info_to_update = {
-    #     "$set": {
-    #         " "
-    #     }
-    # }
 
 
 def add_person(db_collection):
@@ -49,6 +40,5 @@ def search_persons(db_collection, text_filter):
 
 
 def update_person_field(db_collection, person_id, person_field, new_value):
-    return db_collection.update_one({"_id": person_id}, {'$set': {person_field: new_value}})
-
-#HW  reading states Group
+    result = db_collection.update_one({"_id": person_id}, {'$set': {person_field: new_value}})
+    return result
