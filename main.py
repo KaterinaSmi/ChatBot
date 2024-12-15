@@ -67,19 +67,32 @@ def search_persons(message):
 
 
 def save_new_field_value(message):
+    # print(json.dumps(message.json, indent=4))
     field = edit_context[message.chat.id]["field"]
     person_id = edit_context[message.chat.id]["person_id"]
-    new_value = message.text
-    #apply the new value to the function in db_methods
-    db_methods.update_person_field(db_collection=people_collection, person_id=person_id, person_field=field, new_value=new_value)
-    del edit_context[message.chat.id]
-    bot.send_message(message.chat.id, f"{field} updated successfully to {new_value}!")
+    if field == 'photo':
+        telegram_file_path = bot.get_file(message.photo[-1].file_id).file_path
+        telegram_file = bot.download_file(telegram_file_path)
+        file_extension = telegram_file_path.split('.')[-1]
+        file_name = f"{person_id}.{file_extension}"
+        file_path = f"imgs/people/{file_name}"
+        with open(file_path, "wb") as f:
+            f.write(telegram_file)
+        db_methods.update_person_field(db_collection=people_collection, person_id=person_id, person_field=field, new_value=file_path)
+        del edit_context[message.chat.id]
+        bot.send_message(message.chat.id, f"Person's photo updated!")
+    else:
+        new_value = message.text
+        #apply the new value to the function in db_methods
+        db_methods.update_person_field(db_collection=people_collection, person_id=person_id, person_field=field, new_value=new_value)
+        del edit_context[message.chat.id]
+        bot.send_message(message.chat.id, f"{field} updated successfully to {new_value}!")
 
 
 def add_new_field_in_db(message):
     new_field_name = message.text
     edit_context[message.chat.id]["field"] = new_field_name
-    bot.send_message(message.chat.id, text=f"You selected '{new_field_name}'. Please provide a value for this field:")
+    bot.send_message(message.chat.id, text=f"You selected '{new_field_name}'. Please provide data for this field:")
     bot.register_next_step_handler(message, save_new_field_value)
 
 
@@ -93,7 +106,8 @@ def callback_message(callback):
         text = 'User\'s data:\n'
         row_btns = []
         for key, value in person.items():
-            text += f"<b>{key[0].upper()}{key[1:]}</b>: {value}\n"
+            if key != 'photo':
+                text += f"<b>{key[0].upper()}{key[1:]}</b>: {value}\n"
             if key != "_id":
                 button_text = f"Edit {key}"
                 callback_data = f'edit_{key}_{person["_id"]}'  # Need a key to search for appropriate data
@@ -103,7 +117,10 @@ def callback_message(callback):
                 row_btns = []
         markup.add(types.InlineKeyboardButton(text="Add new field", callback_data=f'add_new_field_{person["_id"]}'))
         bot.delete_message(callback.message.chat.id, callback.message.id)
-        bot.send_message(callback.message.chat.id, text=text, parse_mode='html', reply_markup=markup)
+        if 'photo' in person:
+            bot.send_photo(callback.message.chat.id, photo=open(person["photo"], "rb"), caption=text, parse_mode='html', reply_markup=markup)
+        else:
+            bot.send_message(callback.message.chat.id, text=text, parse_mode='html', reply_markup=markup)
 
     elif 'edit_' in callback.data:
         our_data = callback.data.split('_')
@@ -114,7 +131,7 @@ def callback_message(callback):
         edit_context[callback.message.chat.id] = {"field": field, "person_id": person_id}
         bot.send_message(
             chat_id=callback.message.chat.id,
-            text=f"Please enter the new value for {field}:"
+            text=f"Please enter the new data for {field}:"
         )
         bot.register_next_step_handler(callback.message, save_new_field_value)
 
@@ -122,7 +139,7 @@ def callback_message(callback):
         add_new_filed_data = callback.data.split("_")
         person_id = int(add_new_filed_data[3])
         markup = types.ReplyKeyboardMarkup()
-        for field in ['city', 'birthday', 'job', 'gender', 'pet', 'hobby', 'department', 'photo']:
+        for field in ['photo', 'city', 'birthday', 'job', 'gender', 'pet', 'hobby', 'department', 'email']:
             markup.add(types.KeyboardButton(field))
         edit_context[callback.message.chat.id] = {"person_id": person_id}
         bot.send_message(callback.message.chat.id, text="Enter new field name or choose from the following options", parse_mode='html', reply_markup=markup)
