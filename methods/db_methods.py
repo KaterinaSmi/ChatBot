@@ -42,3 +42,7 @@ def search_persons(db_collection, text_filter):
 def update_person_field(db_collection, person_id, person_field, new_value):
     result = db_collection.update_one({"_id": person_id}, {'$set': {person_field: new_value}})
     return result
+
+
+def delete_person_field(db_collection, person_id, person_field):
+    db_collection.update_one({"_id": person_id}, {'$unset': {person_field: 0}})

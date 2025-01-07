@@ -116,6 +116,7 @@ def callback_message(callback):
                 markup.row(row_btns[0], row_btns[1])
                 row_btns = []
         markup.add(types.InlineKeyboardButton(text="Add new field", callback_data=f'add_new_field_{person["_id"]}'))
+        markup.add(types.InlineKeyboardButton(text="Delete field", callback_data=f'for_delete_fields_{person["_id"]}'))
         bot.delete_message(callback.message.chat.id, callback.message.id)
         if 'photo' in person:
             bot.send_photo(callback.message.chat.id, photo=open(person["photo"], "rb"), caption=text, parse_mode='html', reply_markup=markup)
@@ -145,8 +146,31 @@ def callback_message(callback):
         bot.send_message(callback.message.chat.id, text="Enter new field name or choose from the following options", parse_mode='html', reply_markup=markup)
         bot.register_next_step_handler(callback.message, add_new_field_in_db)
 
+    elif 'for_delete_fields' in callback.data:
+        delete_field_data = callback.data.split("_")
+        person_id = int(delete_field_data[-1])
+        person = db_methods.get_person_by_id(db_collection=people_collection, person_id=person_id)
+        markup = types.InlineKeyboardMarkup()
+        row_btns = []
+        for key, value in person.items():
+            if key not in ["_id", 'surname', 'name']:
+                button_text = f"Delete {key}"
+                callback_data = f'delete_field_{key}_{person["_id"]}'  # Need a key to search for appropriate data
+                row_btns.append(types.InlineKeyboardButton(text=button_text, callback_data=callback_data))
+            if len(row_btns) == 2:
+                markup.row(row_btns[0], row_btns[1])
+                row_btns = []
+        if len(row_btns) > 0:
+            markup.row(row_btns[0])
+        bot.send_message(chat_id=callback.message.chat.id, text='Select field to delete:', parse_mode='html', reply_markup=markup)
 
-#fields for editing:
-#city, birthday, job, gender, fullAddress,hobby, pet,  photo, department
+    elif 'delete_field' in callback.data:
+        delete_field_data = callback.data.split("_")
+        person_id = int(delete_field_data[-1])
+        person_field = delete_field_data[-2]
+        db_methods.delete_person_field(db_collection=people_collection, person_id=person_id, person_field=person_field)
+        bot.send_message(chat_id=callback.message.chat.id, text=f'The field "{person_field}" was deleted successfully!')
+
+#professions, list of all professional holidays; and birthday format dictionary
 if __name__ == '__main__':
     bot.infinity_polling()
