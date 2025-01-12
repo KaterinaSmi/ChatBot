@@ -5,6 +5,7 @@ import telebot
 import json
 import requests
 from methods import db_methods
+from datetime import datetime
 
 #Bot setUpmport callbacks
 from idlelib.rpc import request_queue
@@ -12,7 +13,9 @@ from telebot import types
 import telebot
 import json
 import requests
+
 from methods import db_methods
+from others.consts import HOLIDAYS
 
 #Bot setUp
 token = '7765432197:AAHwyBObpdboilKRgNOVF9RVQDtknIdXDVc'
@@ -24,6 +27,7 @@ edit_context = {}
 #database configs
 db = db_methods.get_database("about_people")
 people_collection = db["people"]
+calendar_collection = db["calendar"]
 
 
 @bot.message_handler(commands=['start'])
@@ -65,6 +69,22 @@ def search_persons(message):
         markup.add(types.InlineKeyboardButton(text=f'{person["name"]} {person["surname"]}', callback_data=f'selected_person_{person["_id"]}'))
     bot.send_message(chat_id=message.chat.id, text=f'The persons have been found: ', parse_mode='html', reply_markup=markup)
 
+@bot.message_handler(commands=['holidays'])
+def holidays(message):
+    now = datetime.now()
+    text = f"Today is {now.day} {now.strftime('%B')}\n\n"
+    if now.month in HOLIDAYS and now.day in HOLIDAYS[now.month]["days"]:
+        holidays_today = HOLIDAYS[now.month]["days"][now.day]
+        text += f'Holidays today:\n<i>{", ".join(holidays_today)}</i>\n\n'
+    else:
+        text += "No holidays today"
+    for month in HOLIDAYS:
+        month_name = HOLIDAYS[month]["name"]
+        text += f'Holidays in <b>{month_name}</b>:\n'
+        for day, holiday_name in HOLIDAYS[month]["days"].items():
+            text += f'- <i>{day} of {month_name}</i> is {", ".join(holiday_name)}\n'
+        text += "\n"
+    bot.send_message(chat_id=message.chat.id, text=text, parse_mode='html')
 
 def save_new_field_value(message):
     # print(json.dumps(message.json, indent=4))
@@ -172,5 +192,6 @@ def callback_message(callback):
         bot.send_message(chat_id=callback.message.chat.id, text=f'The field "{person_field}" was deleted successfully!')
 
 #professions, list of all professional holidays; and birthday format dictionary
+#command holidays to handle "/holidays" displays all poss holidays
 if __name__ == '__main__':
     bot.infinity_polling()
