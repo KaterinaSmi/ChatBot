@@ -48,5 +48,3 @@ def delete_person_field(db_collection, person_id, person_field):
     db_collection.update_one({"_id": person_id}, {'$unset': {person_field: 0}})
 
 
-if __name__ == "__main__":
-    insert_calendar()

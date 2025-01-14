@@ -27,7 +27,6 @@ edit_context = {}
 #database configs
 db = db_methods.get_database("about_people")
 people_collection = db["people"]
-calendar_collection = db["calendar"]
 
 
 @bot.message_handler(commands=['start'])
