@@ -1,3 +1,4 @@
+from calendar import month
 from gc import callbacks
 from idlelib.rpc import request_queue
 from telebot import types
@@ -5,7 +6,7 @@ import telebot
 import json
 import requests
 from methods import db_methods
-from datetime import datetime
+from datetime import datetime, timedelta
 
 #Bot setUpmport callbacks
 from idlelib.rpc import request_queue
@@ -14,8 +15,8 @@ import telebot
 import json
 import requests
 
-from methods import db_methods
-from others.consts import HOLIDAYS
+from methods.db_methods import MongoDB
+
 
 #Bot setUp
 token = '7765432197:AAHwyBObpdboilKRgNOVF9RVQDtknIdXDVc'
@@ -25,8 +26,7 @@ bot = telebot.TeleBot(token)
 edit_context = {}
 
 #database configs
-db = db_methods.get_database("about_people")
-people_collection = db["people"]
+db = MongoDB()
 
 
 @bot.message_handler(commands=['start'])
@@ -40,18 +40,48 @@ def start_message(message):
 
 @bot.message_handler(commands=['new_person'])
 def new_person(message):
-    person = db_methods.add_person(db_collection=people_collection)
+    person = db.add_person()
     bot.send_message(chat_id=message.chat.id, text=f'The user\n\nname = {person["name"]}\nsurname = {person["surname"]}\n\nhas been added')
 
 
 @bot.message_handler(commands=['all'])
 def find_all(message):
     markup = types.InlineKeyboardMarkup()
-    all_people = db_methods.get_all(db_collection=people_collection)
+    all_people = db.get_all()
     for person in all_people:
         markup.add(types.InlineKeyboardButton(text=f'{person["name"]} {person["surname"]}',callback_data=f'selected_person_{person["_id"]}'))
     bot.send_message(chat_id=message.chat.id, text=f'These people are in database: ', parse_mode='html', reply_markup=markup)
 
+@bot.message_handler(commands=['today'])
+def today(message):
+    now = datetime.now()
+    text = f"Today is {now.day} {now.strftime('%B')}\n\n"
+    bot.send_message(chat_id=message.chat.id, text=text, parse_mode='html')
+
+@bot.message_handler(commands=['this_month'])
+def this_month(message):
+    persons = db_methods.search_person_by_birthday(db_collection=people_collection, month=datetime.now().month)
+    persons = sorted(persons, key=lambda person: person["birthday"].day)
+    text = f'In {datetime.now().strftime("%B")} birthdays are:\n'
+    for person in persons:
+        birthday = person["birthday"]
+        birthday_formatted = birthday.strftime('%A.%B')
+        text += f'{person["birthday"].strftime('%d.%m.%Y')} - <b>{person["name"]} {person["surname"]}</b>\n'
+    bot.send_message(chat_id=message.chat.id, text=text, parse_mode='html')
+
+@bot.message_handler(commands=['next_month'])
+def next_month(message):
+    now = datetime.now()
+    if now.month+1 == 13:
+        next_month_date = datetime(day=1, month=1, year=now.year+1)
+    else:
+        next_month_date = datetime(day=1, month=now.month+1, year=now.year)
+    persons = db_methods.search_person_by_birthday(db_collection=people_collection, month=next_month_date.month)
+    persons = sorted(persons, key=lambda person: person["birthday"].day)
+    text = f'In {next_month_date.strftime("%B")} birthdays are:\n'
+    for person in persons:
+        text += f'{person["birthday"].strftime('%d.%m.%Y')} - <b>{person["name"]} {person["surname"]}</b> \n'
+    bot.send_message(chat_id=message.chat.id, text=text, parse_mode='html')
 
 @bot.message_handler(commands=['search'])
 def search_persons(message):
@@ -76,7 +106,7 @@ def holidays(message):
         holidays_today = HOLIDAYS[now.month]["days"][now.day]
         text += f'Holidays today:\n<i>{", ".join(holidays_today)}</i>\n\n'
     else:
-        text += "No holidays today"
+        text += "No holidays today\n\n"
     for month in HOLIDAYS:
         month_name = HOLIDAYS[month]["name"]
         text += f'Holidays in <b>{month_name}</b>:\n'
@@ -102,10 +132,15 @@ def save_new_field_value(message):
         bot.send_message(message.chat.id, f"Person's photo updated!")
     else:
         new_value = message.text
+        text_value = f"<b>{new_value}</b>"
+        if field == 'birthday':
+            new_value = datetime.strptime(new_value, '%d.%m.%Y')
+            text_value = f"<b>{new_value.strftime('%d.%m.%Y')}</b>"
         #apply the new value to the function in db_methods
         db_methods.update_person_field(db_collection=people_collection, person_id=person_id, person_field=field, new_value=new_value)
         del edit_context[message.chat.id]
-        bot.send_message(message.chat.id, f"{field} updated successfully to {new_value}!")
+
+        bot.send_message(message.chat.id, f"{field} updated successfully to {text_value}!", parse_mode="html")
 
 
 def add_new_field_in_db(message):
@@ -125,6 +160,8 @@ def callback_message(callback):
         text = 'User\'s data:\n'
         row_btns = []
         for key, value in person.items():
+            if key == 'birthday':
+                value = value.strftime('%d.%m.%Y')
             if key != 'photo':
                 text += f"<b>{key[0].upper()}{key[1:]}</b>: {value}\n"
             if key != "_id":

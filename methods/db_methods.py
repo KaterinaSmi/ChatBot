@@ -5,38 +5,42 @@ from pymongo import MongoClient
 import re
 
 
-def get_database(db_name):
-    CONNECTION_STRING = "mongodb://localhost:27017/"
-    client = MongoClient(CONNECTION_STRING)
-    return client[db_name]
+class MongoDB(object):
+    def __init__(self):
+        self._client = MongoClient("mongodb://localhost:27017/")
+        self._db = self._client["about_people"]
+        self._collection_people = self._db["people"]
+        self._collection_holidays = self._db["holidays"]
 
-def get_all(db_collection):
-    return db_collection.find({})
+    def get_all(self):
+        return self._collection_people.find({})
 
-def get_count(db_collection):
-    return db_collection.count_documents({})
+    def get_count(self):
+        return self._collection_people.count_documents({})
 
-#update_one , update_many ({"job": "developer"})
-def get_person_by_id(db_collection, person_id:int):
-    person = db_collection.find_one({"_id": person_id})
-    return person
+    #update_one , update_many ({"job": "developer"})
+    def get_person_by_id(self, person_id:int):
+        person = self._collection_people.find_one({"_id": person_id})
+        return person
 
-
-def add_person(db_collection):
-    count_d = get_count(db_collection)
-    data = {
-        "_id": count_d + 1,
-        "name": f"name{count_d + 1}",
-        "surname": f"surname{count_d + 1}"
-    }
-    db_collection.insert_one(data)
-    return data
+    def add_person(self):
+        count_d = self.get_count()
+        data = {
+            "_id": count_d + 1,
+            "name": f"name{count_d + 1}",
+            "surname": f"surname{count_d + 1}"
+        }
+        self._collection_people.insert_one(data)
+        return data
 
 
 def search_persons(db_collection, text_filter):
     return list(db_collection.find({
         "$or": [{"name": {"$regex": text_filter}} , {"surname": {"$regex": text_filter}}]
     }))
+
+def search_person_by_birthday(db_collection, month: int):
+    return list(db_collection.find({"$expr": {"$eq": [{"$month": "$birthday"}, month]}}))
 
 
 def update_person_field(db_collection, person_id, person_field, new_value):
